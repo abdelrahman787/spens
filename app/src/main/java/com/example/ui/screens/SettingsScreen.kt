@@ -44,10 +44,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
             Divider()
 
-            ListItem(
-                headlineContent = { Text("الميزانية الشهرية") },
-                supportingContent = { Text("تعديل قيمة الميزانية") }
-            )
+            com.masareefy.app.ui.components.BudgetSettings(viewModel = viewModel)
+
             ListItem(
                 headlineContent = { Text("المظهر") },
                 supportingContent = { Text("فاتح / داكن") }

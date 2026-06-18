@@ -9,6 +9,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -23,6 +26,8 @@ import com.masareefy.app.ui.MainViewModel
 fun ReportsScreen(viewModel: MainViewModel) {
     val periods = listOf("اليوم", "الأسبوع", "الشهر", "٣ أشهر", "السنة")
     var selectedPeriod by remember { mutableStateOf("الشهر") }
+    
+    val expenses by viewModel.expenses.collectAsState()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("التقارير") }) }
@@ -86,19 +91,22 @@ fun ReportsScreen(viewModel: MainViewModel) {
             Spacer(Modifier.height(16.dp))
             Text("الإنفاق حسب الفئة", modifier = Modifier.padding(horizontal = 16.dp), fontWeight = FontWeight.Bold)
             
-            val mockData = listOf(
-                CategorySpending("أكل ومطاعم", 800.0),
-                CategorySpending("نقل ومواصلات", 300.0),
-                CategorySpending("بقالة", 400.0)
-            )
-            
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth().height(150.dp)) {
-                DonutChart(data = mockData, modifier = Modifier.size(100.dp))
+            // Recharts-inspired Monthly Expense Chart
+            val categoryExpenses = expenses.groupBy { it.category }.mapValues { it.value.sumOf { exp -> exp.amount } }.toList()
+            val chartData = if (categoryExpenses.isEmpty()) {
+                listOf(Pair("لا يوجد بيانات", 1.0))
+            } else {
+                categoryExpenses
             }
+            
+            Box(modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp)) {
+                MonthlyExpenseChart(data = chartData)
+            }
+            
             // Legends
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                mockData.forEachIndexed { index, item ->
-                    val color = listOf(Color(0xFFFF8F00), Color(0xFF0288D1), Color(0xFF7B1FA2))[index % 3]
+                chartData.forEachIndexed { index, item ->
+                    val color = listOf(Color(0xFFFF8F00), Color(0xFF0288D1), Color(0xFF7B1FA2), Color(0xFF388E3C), Color(0xFFE53935))[index % 5]
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -107,9 +115,9 @@ fun ReportsScreen(viewModel: MainViewModel) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(modifier = Modifier.size(12.dp), shape = RoundedCornerShape(2.dp), color = color) {}
                             Spacer(Modifier.width(8.dp))
-                            Text(item.category)
+                            Text(item.first)
                         }
-                        Text("${item.total} ج.م", fontWeight = FontWeight.Bold)
+                        Text("${item.second} ج.م", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -118,27 +126,28 @@ fun ReportsScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun DonutChart(
-    data: List<CategorySpending>,
-    modifier: Modifier = Modifier
-) {
-    val colors = listOf(
-        Color(0xFFFF8F00), Color(0xFF0288D1), Color(0xFF7B1FA2),
-        Color(0xFF388E3C), Color(0xFFE53935), Color(0xFF00695C), Color(0xFF90A4AE)
-    )
-    Canvas(modifier = modifier) {
-        val total = data.sumOf { it.total }
-        var startAngle = -90f
+fun MonthlyExpenseChart(data: List<Pair<String, Double>>) {
+    val colors = listOf(Color(0xFFFF8F00), Color(0xFF0288D1), Color(0xFF7B1FA2), Color(0xFF388E3C), Color(0xFFE53935))
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val maxAmount = data.maxOfOrNull { it.second }?.toFloat() ?: 1f
+        val maxLabelHeight = 40f
+        val canvasWidth = size.width
+        val canvasHeight = size.height - maxLabelHeight
+        
+        val barWidth = canvasWidth / (data.size * 2)
+        val spacing = barWidth
+        
         data.forEachIndexed { index, item ->
-            val sweep = ((item.total / total) * 360f).toFloat()
-            drawArc(
+            val barHeight = ((item.second.toFloat() / maxAmount) * canvasHeight).coerceAtLeast(10f)
+            val left = index * (barWidth + spacing) + spacing / 2
+            val top = canvasHeight - barHeight
+            
+            drawRoundRect(
                 color = colors[index % colors.size],
-                startAngle = startAngle,
-                sweepAngle = sweep,
-                useCenter = false,
-                style = Stroke(width = 40f, cap = StrokeCap.Butt)
+                topLeft = Offset(left, top),
+                size = Size(barWidth, barHeight),
+                cornerRadius = CornerRadius(8f, 8f)
             )
-            startAngle += sweep
         }
     }
 }

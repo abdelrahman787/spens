@@ -17,12 +17,16 @@ import java.time.format.DateTimeFormatter
 
 class MainViewModel(
     private val transactionDao: TransactionDao,
+    private val expenseDao: com.masareefy.app.data.ExpenseDao,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val currentMonthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
     
     val transactions = transactionDao.getAllTransactions()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val expenses = expenseDao.getAllExpenses()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val monthlySpent = transactionDao.getMonthlySpent(currentMonthPrefix)
@@ -65,11 +69,11 @@ class MainViewModel(
     }
 
     companion object {
-        fun provideFactory(transactionDao: TransactionDao, userPreferencesRepository: UserPreferencesRepository): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        fun provideFactory(transactionDao: TransactionDao, expenseDao: com.masareefy.app.data.ExpenseDao, userPreferencesRepository: UserPreferencesRepository): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                    return MainViewModel(transactionDao, userPreferencesRepository) as T
+                    return MainViewModel(transactionDao, expenseDao, userPreferencesRepository) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }

@@ -6,12 +6,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.masareefy.app.ui.MainViewModel
@@ -19,8 +23,21 @@ import com.masareefy.app.ui.MainViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionsScreen(viewModel: MainViewModel) {
-    val filters = listOf("الكل", "أكل", "مواصلات", "بقالة", "صحة", "دخل")
     val transactions by viewModel.transactions.collectAsState()
+    
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("الكل") }
+
+    val filters = listOf("الكل") + transactions.map { it.category }.distinct().sorted()
+
+    val filteredTransactions = transactions.filter { t ->
+        val matchesSearch = searchQuery.isBlank() || 
+            (t.note?.contains(searchQuery, ignoreCase = true) == true) ||
+            t.category.contains(searchQuery, ignoreCase = true) ||
+            t.amount.toString().contains(searchQuery)
+        val matchesCategory = selectedCategory == "الكل" || t.category == selectedCategory
+        matchesSearch && matchesCategory
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("المعاملات") }) }
@@ -31,12 +48,20 @@ fun TransactionsScreen(viewModel: MainViewModel) {
                 .fillMaxSize()
         ) {
             OutlinedTextField(
-                value = "",
-                onValueChange = {},
-                placeholder = { Text("ابحث في المعاملات...") },
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("ابحث في المعاملات (ملاحظة، فئة، مبلغ)...") },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "بحث") },
-                trailingIcon = { Icon(Icons.Default.Mic, contentDescription = "بحث صوتي") }
+                trailingIcon = { 
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "مسح")
+                        }
+                    } else {
+                        Icon(Icons.Default.Mic, contentDescription = "بحث صوتي")
+                    }
+                }
             )
             
             Spacer(Modifier.height(8.dp))
@@ -50,8 +75,8 @@ fun TransactionsScreen(viewModel: MainViewModel) {
             ) {
                 filters.forEach { filter ->
                     FilterChip(
-                        selected = filter == "الكل",
-                        onClick = { /* TODO */ },
+                        selected = filter == selectedCategory,
+                        onClick = { selectedCategory = filter },
                         label = { Text(filter) }
                     )
                 }
@@ -59,11 +84,18 @@ fun TransactionsScreen(viewModel: MainViewModel) {
 
             Spacer(Modifier.height(16.dp))
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
-                items(transactions) { t ->
-                    TransactionItem(t)
+            if (filteredTransactions.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    Text("لا توجد معاملات مطابقة", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                    items(filteredTransactions) { t ->
+                        TransactionItem(t)
+                    }
                 }
             }
         }
     }
 }
+

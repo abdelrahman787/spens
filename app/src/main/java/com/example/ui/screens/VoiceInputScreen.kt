@@ -118,7 +118,7 @@ fun VoiceInputScreen(viewModel: MainViewModel, onBack: () -> Unit, onManualEntry
             Spacer(modifier = Modifier.height(40.dp))
             
             Text("قول مصروفك", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            Text("مثلاً: \"صرفت النهارده مية وخمسين جنيه على الأكل\"", fontSize = 14.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
+            Text("مثلاً: صرفت النهارده مية وخمسين جنيه على الأكل", fontSize = 14.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
 
             Spacer(modifier = Modifier.weight(1f))
 

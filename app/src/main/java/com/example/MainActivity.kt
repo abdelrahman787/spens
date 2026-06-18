@@ -1,9 +1,11 @@
 package com.masareefy.app
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -42,6 +44,7 @@ import com.masareefy.app.ui.screens.VoiceInputScreen
 import com.masareefy.app.ui.theme.MyApplicationTheme
 import com.masareefy.app.ui.theme.PrimaryTeal
 import com.masareefy.app.ui.theme.InactiveGray
+import com.masareefy.app.worker.ReminderHelper
 
 sealed class Screen(val route: String, val titleAr: String, val icon: ImageVector) {
     object Home : Screen("home", "الرئيسية", Icons.Outlined.Home)
@@ -51,10 +54,25 @@ sealed class Screen(val route: String, val titleAr: String, val icon: ImageVecto
 }
 
 class MainActivity : ComponentActivity() {
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            ReminderHelper.scheduleDailyReminder(this)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val appContainer = (application as MasareefyApplication).container
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            ReminderHelper.scheduleDailyReminder(this)
+        }
 
         setContent {
             MyApplicationTheme {
@@ -70,7 +88,7 @@ class MainActivity : ComponentActivity() {
 fun MasareefyApp(appContainer: AppContainer) {
     val navController = rememberNavController()
     val viewModel: MainViewModel = viewModel(
-        factory = MainViewModel.provideFactory(appContainer.transactionDao, appContainer.userPreferencesRepository)
+        factory = MainViewModel.provideFactory(appContainer.transactionDao, appContainer.expenseDao, appContainer.userPreferencesRepository)
     )
 
     val isOnboardingDone by viewModel.isOnboardingDone.collectAsState()

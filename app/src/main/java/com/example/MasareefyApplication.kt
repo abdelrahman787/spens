@@ -1,4 +1,4 @@
-package com.example
+package com.masareefy.app
 
 import android.app.Application
 

@@ -1,10 +1,11 @@
-package com.example.ui
+package com.masareefy.app.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.data.TransactionDao
-import com.example.data.TransactionEntity
+import com.masareefy.app.data.TransactionDao
+import com.masareefy.app.data.TransactionEntity
+import com.masareefy.app.data.UserPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +15,10 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class MainViewModel(private val transactionDao: TransactionDao) : ViewModel() {
+class MainViewModel(
+    private val transactionDao: TransactionDao,
+    private val userPreferencesRepository: UserPreferencesRepository
+) : ViewModel() {
 
     private val currentMonthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
     
@@ -24,7 +28,26 @@ class MainViewModel(private val transactionDao: TransactionDao) : ViewModel() {
     val monthlySpent = transactionDao.getMonthlySpent(currentMonthPrefix)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val monthlyBudget = MutableStateFlow(10000.0) // Mock budget
+    val monthlyBudget = userPreferencesRepository.monthlyBudget
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3000.0)
+
+    val userName = userPreferencesRepository.userName
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "المستخدم")
+
+    val isOnboardingDone = userPreferencesRepository.isOnboardingDone
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun updateMonthlyBudget(amount: Double) {
+        viewModelScope.launch {
+            userPreferencesRepository.setMonthlyBudget(amount)
+        }
+    }
+
+    fun completeOnboarding() {
+        viewModelScope.launch {
+            userPreferencesRepository.setOnboardingDone()
+        }
+    }
 
     fun addTransaction(amount: Double, category: String, isIncome: Boolean, note: String?) {
         viewModelScope.launch {
@@ -42,11 +65,11 @@ class MainViewModel(private val transactionDao: TransactionDao) : ViewModel() {
     }
 
     companion object {
-        fun provideFactory(transactionDao: TransactionDao): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        fun provideFactory(transactionDao: TransactionDao, userPreferencesRepository: UserPreferencesRepository): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                    return MainViewModel(transactionDao) as T
+                    return MainViewModel(transactionDao, userPreferencesRepository) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }

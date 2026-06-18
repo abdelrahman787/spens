@@ -1,4 +1,4 @@
-package com.example.ui.screens
+package com.masareefy.app.ui.screens
 
 import android.Manifest
 import android.content.Intent
@@ -31,9 +31,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.example.domain.ParsedExpense
-import com.example.domain.VoiceParser
-import com.example.ui.MainViewModel
+import com.masareefy.app.domain.ParsedExpense
+import com.masareefy.app.domain.VoiceParser
+import com.masareefy.app.ui.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,9 +118,16 @@ fun VoiceInputScreen(viewModel: MainViewModel, onBack: () -> Unit, onManualEntry
             Spacer(modifier = Modifier.height(40.dp))
             
             Text("قول مصروفك", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            Text("مثال: \"صرفت ٥٠ جنيه في السوبر ماركت\"", fontSize = 14.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
+            Text("مثلاً: \"صرفت النهارده مية وخمسين جنيه على الأكل\"", fontSize = 14.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
 
             Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = if (isListening) "جاري الاستماع..." else "اضغط للتحدث",
+                fontSize = 16.sp,
+                color = if (isListening) MaterialTheme.colorScheme.primary else Color.Gray,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
 
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(200.dp)) {
                 if (isListening) {
@@ -194,7 +201,7 @@ fun VoiceInputScreen(viewModel: MainViewModel, onBack: () -> Unit, onManualEntry
                     Button(onClick = onManualEntry, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.Keyboard, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("كتابة يدوية")
+                        Text("إدخال يدوي")
                     }
                 }
             }
@@ -219,7 +226,7 @@ fun ConfirmationSheet(parsed: ParsedExpense, onSave: () -> Unit, onCancel: () ->
             Divider(modifier = Modifier.padding(vertical = 8.dp))
             Text("الفئة: ${parsed.category}", fontWeight = FontWeight.Bold)
             Divider(modifier = Modifier.padding(vertical = 8.dp))
-            Text("ملاحظة: ${parsed.note}")
+            Text("ملاحظة: ${parsed.note ?: "لا يوجد"}")
             
             Spacer(modifier = Modifier.height(24.dp))
             

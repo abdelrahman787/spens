@@ -1,15 +1,17 @@
-package com.example.ui.screens
+package com.masareefy.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,8 +23,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.TransactionEntity
-import com.example.ui.MainViewModel
+import com.masareefy.app.data.TransactionEntity
+import com.masareefy.app.ui.MainViewModel
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,11 +37,29 @@ fun HomeScreen(
     val transactions by viewModel.transactions.collectAsState()
     val monthlySpent by viewModel.monthlySpent.collectAsState()
     val monthlyBudget by viewModel.monthlyBudget.collectAsState()
+    val userName by viewModel.userName.collectAsState()
+    
+    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    val greeting = when {
+        hour < 12 -> "صباح الخير 👋"
+        hour < 18 -> "مساء الخير 👋"
+        else -> "مساء النور 👋"
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("مصاريفي", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
+                title = { 
+                    Column {
+                        Text(greeting, fontSize = 14.sp, color = Color.Gray)
+                        Text(userName, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* TODO */ }) {
+                        Icon(Icons.Outlined.Notifications, contentDescription = "الإشعارات")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
@@ -46,7 +67,8 @@ fun HomeScreen(
             FloatingActionButton(
                 onClick = onVoiceInputClick,
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.offset(y = (-32).dp)
             ) {
                 Icon(Icons.Default.Mic, contentDescription = "تسجيل صوتي")
             }
@@ -59,7 +81,43 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
-            BudgetCard(spent = monthlySpent ?: 0.0, budget = monthlyBudget)
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("صرفت النهارده", fontSize = 12.sp)
+                        Text("${monthlySpent ?: 0.0} ج.م", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("متبقي للميزانية", fontSize = 12.sp)
+                        Text("${monthlyBudget - (monthlySpent ?: 0.0)} ج.م", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text("الميزانيات", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Placeholder category scroll
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(5) { index ->
+                    Card(modifier = Modifier.width(120.dp).height(80.dp)) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("فئة $index")
+                        }
+                    }
+                }
+            }
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -68,58 +126,26 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("أحدث المعاملات", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                TextButton(onClick = onAddExpenseClick) {
-                    Text("إضافة يدوية")
+                Text("أحدث المعاملات", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                TextButton(onClick = { /* TODO navigate to transactions list */ }) {
+                    Text("مشاهدة الكل")
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (transactions.isEmpty()) {
+            val recentTransactions = transactions.take(5)
+            if (recentTransactions.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("لا توجد معاملات بعد", color = Color.Gray)
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(transactions) { t ->
+                    items(recentTransactions) { t ->
                         TransactionItem(t)
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun BudgetCard(spent: Double, budget: Double) {
-    val percentage = if (budget > 0) (spent / budget).toFloat() else 0f
-    
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("الميزانية المتبقية", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f), fontSize = 12.sp)
-            Text("${budget - spent} ج.م", color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("المنفق: $spent", color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 12.sp)
-                Text("الميزانية: $budget", color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 12.sp)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { percentage },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = MaterialTheme.colorScheme.secondary,
-                trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
-            )
         }
     }
 }
